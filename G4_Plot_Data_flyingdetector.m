@@ -33,7 +33,7 @@ files = dir(exp_folder);
 try
     Data_name = files(contains({files.name},{'G4_Processed_Data'})).name;
 catch
-    error('cannot find TDMSlogs file in specified folder')
+    error('cannot find G4_Processed_Data file in specified folder')
 end
 load(fullfile(exp_folder,Data_name));
 

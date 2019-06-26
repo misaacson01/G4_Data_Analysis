@@ -33,7 +33,7 @@ files = dir(exp_folder);
 try
     TDMS_logs_name = files(contains({files.name},{'G4_TDMS_Logs'})).name;
 catch
-    error('cannot find TDMSlogs file in specified folder')
+    error('cannot find G4_TDMS_Logs file in specified folder')
 end
 load(fullfile(exp_folder,TDMS_logs_name));
 
@@ -112,7 +112,7 @@ LpR_ind = find(strcmpi(channel_order,'LpR'));
 L_ind = find(strcmpi(channel_order,'L_chan'));
 R_ind = find(strcmpi(channel_order,'R_chan'));
 F_ind = find(strcmpi(channel_order,'F_chan'));
-num_ts_datatypes = 1 + length(channel_order);
+num_ts_datatypes = length(channel_order);
 num_ADC_chans = length(Log.ADC.Channels);
 
 %structure data by datatype/condition/repetition
