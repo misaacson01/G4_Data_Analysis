@@ -5,7 +5,6 @@ function G4_Process_Data_flyingdetector(exp_folder, trial_options)
 % exp_folder: path containing G4_TDMS_Logs file
 % trial_options: 1x3 logical array [pre-trial, intertrial, post-trial]
 
-
 %% user-defined parameters
 %specify timeseries data channels
 channel_order = {'LmR_chan', 'L_chan', 'R_chan', 'F_chan', 'Frame Position', 'LmR', 'LpR'};
@@ -116,7 +115,7 @@ num_ts_datatypes = length(channel_order);
 num_ADC_chans = length(Log.ADC.Channels);
 
 %structure data by datatype/condition/repetition
-ts_time = -pre_dur:1/data_rate:longest_dur+post_dur; 
+ts_time = -pre_dur-0.01:1/data_rate:longest_dur+post_dur+0.01; 
 ts_data = nan([num_ts_datatypes num_conds num_reps length(ts_time)]);
 for trial=1:num_trials
     cond = exp_order(trial);

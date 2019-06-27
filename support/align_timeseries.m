@@ -18,7 +18,8 @@ aligned_data = nan([min([ceil(2*unaligned_period/set_period) 3]) length(set_time
 %align data to nearest time indices in set_times (col_inds)
 %multiple datapoints occupying the same col_ind are given different row_inds
 col_inds = round(((unaligned_times-min(set_times))/set_period)+1);
-row_inds = round(diff([0 col_inds]));
+row_inds = diff([0 col_inds]);
+row_inds(row_inds>1) = 1;
 while any(row_inds==0)
     next_idx = ~row_inds;
     row_inds = row_inds + logical(row_inds(1:end-1))*next_idx(2:end)*(row_inds(1:end-1)+1);
