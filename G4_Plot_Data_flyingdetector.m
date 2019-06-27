@@ -21,13 +21,13 @@ mean_Color = [0 0 0];
 rep_LineWidth = 0.05;
 mean_LineWidth = 1;
 subtitle_FontSize = 8;
-
+ylimits = [-6 6; -1 6; -1 6; -1 6; 1 192; -6 6; 2 10]; %[min max] y limits for each datatype
 
 %% load data and prepare for plotting
 %load G4_Processed_Data
 if nargin==0
     exp_folder = uigetdir('C:/','Select a folder containing a G4_Processed_Data file');
-    trial_options = [0 0 0];
+    trial_options = [1 1 1];
 end
 files = dir(exp_folder);
 try
@@ -39,48 +39,55 @@ load(fullfile(exp_folder,Data_name));
 
 %create default matrices for plotting all conditions
 if nargin<5 
-    CL_conds = find(Data.conditionModes==4); %all closed-loop modes
-    OL_conds = find(Data.conditionModes~=4); %all open-loop modes
     TC_conds = []; %by default, don't plot any tuning curves
-    CL_conds = reshape(CL_conds,[round(sqrt(numel(CL_conds))) ceil(sqrt(numel(CL_conds)))])';
-    OL_conds = reshape(OL_conds,[round(sqrt(numel(OL_conds))) ceil(sqrt(numel(OL_conds)))])';
+    CLs = find(Data.conditionModes==4); %all closed-loop modes
+    OLs = find(Data.conditionModes~=4); %all open-loop modes
+    CL_conds = nan([round(sqrt(numel(CLs))) ceil(sqrt(numel(CLs)))]); %make subplot structure
+    CL_conds(1:length(CLs)) = CLs; %fills conditions top->bottom, left->right
+    CL_conds = CL_conds'; %so that conditions are organized left->right, top->bottom
+    OL_conds = nan([round(sqrt(numel(OLs))) ceil(sqrt(numel(OLs)))]);
+    OL_conds(1:length(OLs)) = OLs; %fills conditions top->bottom, left->right
+    OL_conds = OL_conds'; %so that conditions are organized left->right, top->bottom
 end
+
 
 %get datatype indices
 num_OL_datatypes = length(OL_datatypes);
 OL_inds = nan(1,num_OL_datatypes);
-for i = 1:num_OL_datatypes
-    OL_inds(i) = find(strcmpi(Data.channelNames.timeseries,OL_datatypes{i}));
+for d = 1:num_OL_datatypes
+    OL_inds(d) = find(strcmpi(Data.channelNames.timeseries,OL_datatypes{d}));
 end
 num_CL_datatypes = length(CL_datatypes);
 CL_inds = nan(1,num_CL_datatypes);
-for i = 1:num_CL_datatypes
-    CL_inds(i) = find(strcmpi(Data.channelNames.timeseries,CL_datatypes{i}));
+for d = 1:num_CL_datatypes
+    CL_inds(d) = find(strcmpi(Data.channelNames.timeseries,CL_datatypes{d}));
 end
 num_TC_datatypes = length(TC_datatypes);
 TC_inds = nan(1,num_TC_datatypes);
-for i = 1:num_TC_datatypes
-    TC_inds(i) = find(strcmpi(Data.channelNames.timeseries,TC_datatypes{i}));
+for d = 1:num_TC_datatypes
+    TC_inds(d) = find(strcmpi(Data.channelNames.timeseries,TC_datatypes{d}));
 end
 
 
 %% plot data
 %calculate overall measurements and plot basic histograms
 figure()
-for i = 1:num_TC_datatypes
+for d = 1:num_TC_datatypes
     subplot(2,num_TC_datatypes,1)
-    data_vec = reshape(Data.timeseries(TC_inds(i),:,:,:),[1 numel(Data.timeseries(TC_inds(i),:,:,:))]);
-    text(0.1, 0.9-0.2*i, ['Mean ' TC_datatypes{i} ' = ' num2str(nanmean(data_vec))]);
+    datastr = TC_datatypes{d};
+    datastr(strfind(datastr,'_')) = '-'; %convert underscores to dashes to prevent subscripts
+    data_vec = reshape(Data.timeseries(TC_inds(d),:,:,:),[1 numel(Data.timeseries(TC_inds(d),:,:,:))]);
+    text(0.1, 0.9-0.2*d, ['Mean ' datastr ' = ' num2str(nanmean(data_vec))]);
     axis off
     hold on
     
-    subplot(2,num_TC_datatypes,num_TC_datatypes+i)
+    subplot(2,num_TC_datatypes,num_TC_datatypes+d)
     avg = length(data_vec)/100;
     hist(data_vec,100)
     hold on
     xl = xlim;
     plot(xl,[avg avg],'--','Color',rep_Color','LineWidth',mean_LineWidth)
-    title([TC_datatypes{i} ' Histogram'],'FontSize',subtitle_FontSize);
+    title([datastr ' Histogram'],'FontSize',subtitle_FontSize);
 end
 if trial_options(2)==1
     subplot(2,num_TC_datatypes,num_TC_datatypes)
@@ -110,6 +117,7 @@ if ~isempty(CL_conds)
                         plot(repmat(x',[1 num_reps]),tmpdata','Color',rep_Color,'LineWidth',rep_LineWidth);
                         hold on
                         plot(x,nanmean(tmpdata),'Color',mean_Color,'LineWidth',mean_LineWidth)
+                        ylim(ylimits(CL_inds(d),:));
                         title(['Condition #' num2str(cond)],'FontSize',subtitle_FontSize)
                     end
                 end
@@ -121,7 +129,7 @@ end
 %plot timeseries data for open-loop trials
 if ~isempty(OL_conds)
     num_figs = size(OL_conds,3);
-    num_reps = size(data.timeseries,3);
+    num_reps = size(Data.timeseries,3);
     %loop for different data types
     for d = 1:length(OL_datatypes)
         for fig = 1:num_figs
@@ -130,12 +138,16 @@ if ~isempty(OL_conds)
             figure()
             for row = 1:num_plot_rows
                 for col = 1:num_plot_cols
-                    subplot(num_plot_rows, num_plot_cols, col+num_plot_cols*(row-1))
-                    subplot(num_plot_rows, num_plot_cols, col+num_plot_cols*(row-1))
-                    plot(repmat(Data.timestamps',[1 num_reps]),squeeze(Data.timeseries(d,cond,:,:))','Color',rep_Color,'LineWidth',rep_LineWidth);
-                    hold on
-                    plot(Data.timestamps,squeeze(nanmean(Data.timeseries(s,cond,:,:),3)),'Color',mean_Color,'LineWidth',mean_LineWidth);
-                    title(['Condition #' num2str(cond)],'FontSize',subtitle_FontSize)
+                    cond = OL_conds(row,col,fig);
+                    if ~isnan(cond)
+                        subplot(num_plot_rows, num_plot_cols, col+num_plot_cols*(row-1))
+                        subplot(num_plot_rows, num_plot_cols, col+num_plot_cols*(row-1))
+                        plot(repmat(Data.timestamps',[1 num_reps]),squeeze(Data.timeseries(d,cond,:,:))','Color',rep_Color,'LineWidth',rep_LineWidth);
+                        hold on
+                        plot(Data.timestamps,squeeze(nanmean(Data.timeseries(d,cond,:,:),3)),'Color',mean_Color,'LineWidth',mean_LineWidth);
+                        ylim(ylimits(OL_inds(d),:));
+                        title(['Condition #' num2str(cond)],'FontSize',subtitle_FontSize)
+                    end
                 end
             end
         end
@@ -157,6 +169,7 @@ if ~isempty(TC_conds)
                 plot(squeeze(Data.summaries(d,conds,:)),'Color',rep_Color,'LineWidth',rep_LineWidth);
                 hold on
                 plot(nanmean(Data.summaries(d,conds,:),3),'Color',mean_Color,'LineWidth',mean_LineWidth);
+                ylim(ylimits(TC_inds(d),:));
                 title(['Condition #' num2str(cond)],'FontSize',subtitle_FontSize)
             end
         end

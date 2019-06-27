@@ -1,4 +1,4 @@
-function G4_Process_Data_flyingdetector(exp_folder, trial_options)
+% function G4_Process_Data_flyingdetector(exp_folder, trial_options)
 %FUNCTION G4_Process_Data_flyingdetector(exp_folder, trial_options)
 % 
 % Inputs:
@@ -15,15 +15,15 @@ pre_dur = 1; %seconds before start of trial to include
 post_dur = 1; %seconds after end of trial to include
 da_start = 0; %seconds after start of trial
 da_stop = 0; %seconds before end of trial
-time_conv = 1000000; %converts seconds to micros (TDMS timestamps are in micros)
+time_conv = 1000000; %converts seconds to microseconds (TDMS timestamps are in micros)
 
 
 %% configure data processing
 %specify exp folder to analyse and plot
-if nargin==0
+% if nargin==0
     exp_folder = uigetdir('C:/','Select a folder containing a G4_TDMS_Logs file');
     trial_options = [0 0 0]; %[pre-trial, inter-trial, post-trial]
-end
+% end
 
 
 %% process TDMS data
@@ -183,26 +183,22 @@ end
 if trial_options(2)==1
     inter_inds = [];
     num_intertrials = num_trials-1;
-    inter_dur = (intertrial_stop_times - intertrial_start_times)/time_conv;
-    longest_dur = max(inter_dur);
-    inter_ts_time = 0:1/data_rate:longest_dur; 
+    inter_durs = (intertrial_stop_times - intertrial_start_times)/time_conv;
+    inter_ts_time = 0:1/data_rate:max(inter_durs)+0.01; 
     inter_ts_data = nan([num_intertrials length(inter_ts_time)]);
-    for i = 1:num_intertrials
+    for itrial = 1:num_intertrials
         %get frame position data, upsampled to match ADC timestamps
-        start_ind = find(Log.Frames.Time(1,:)>=intertrial_start_times(trial),1);
-        stop_ind = find(Log.Frames.Time(1,:)>intertrial_stop_times(trial),1)-1;
-        if isempty(stop_ind)
-            stop_ind = length(Log.Frames.Time(1,:));
-        end
-        unaligned_time = (Log.Frames.Time(1,start_ind:stop_ind)-trial_start_times(trial))/time_conv;
-        inter_ts_data(i,:) = align_timeseries(inter_ts_time, unaligned_time, Log.Frames.Position(1,start_ind:stop_ind)+1, 'propagate', 'median');
+        start_ind = find(Log.Frames.Time(1,:)>=intertrial_start_times(itrial),1);
+        stop_ind = find(Log.Frames.Time(1,:)>intertrial_stop_times(itrial),1)-1;
+        unaligned_time = (Log.Frames.Time(1,start_ind:stop_ind)-intertrial_start_times(itrial))/time_conv;
+        inter_ts_data(itrial,:) = align_timeseries(inter_ts_time, unaligned_time, Log.Frames.Position(1,start_ind:stop_ind)+1, 'propagate', 'median');
     end
-    max_num_positions = max(max(inter_ts_data));
+    max_num_position = max(max(inter_ts_data));
     min_num_position = min(min(inter_ts_data));
-    
-    p = reshape((min_num_position:max_num_positions),[1 1 length(p)]);
+    p = (min_num_position:max_num_position);
+    p = reshape((min_num_position:max_num_position),[1 1 length(p)]);
     p_inds = inter_ts_data==p;
-    inter_hist_data = nansum(p_inds,3); %histogram of pattern position
+    inter_hist_data = squeeze(nansum(p_inds,2)); %histogram of pattern position
 else
     inter_hist_data = [];
 end
