@@ -11,7 +11,7 @@ function G4_Plot_Data_flyingdetector(exp_folder, trial_options, CL_conds, OL_con
 
 %% user-defined parameters
 %datatype options: 'LmR_chan', 'L_chan', 'R_chan', 'F_chan', 'Frame Position', 'LmR', 'LpR'
-CL_datatypes = {'Frame Position'}; %datatypes to plot as histograms
+CL_datatypes = {'Frame Position','LmR','LpR'}; %datatypes to plot as histograms
 OL_datatypes = {'LmR','LpR'}; %datatypes to plot as timeseries
 TC_datatypes = {'LmR','LpR'}; %datatypes to plot as tuning curves
 
