@@ -39,17 +39,12 @@ load(fullfile(exp_folder,Data_name));
 
 %create default matrices for plotting all conditions
 if nargin<5 
+    CL_conds = find(Data.conditionModes==4); %all closed-loop modes
+    OL_conds = find(Data.conditionModes~=4); %all open-loop modes
     TC_conds = []; %by default, don't plot any tuning curves
-    CLs = find(Data.conditionModes==4); %all closed-loop modes
-    OLs = find(Data.conditionModes~=4); %all open-loop modes
-    CL_conds = nan([round(sqrt(numel(CLs))) ceil(sqrt(numel(CLs)))]); %make subplot structure
-    CL_conds(1:length(CLs)) = CLs; %fills conditions top->bottom, left->right
-    CL_conds = CL_conds'; %so that conditions are organized left->right, top->bottom
-    OL_conds = nan([round(sqrt(numel(OLs))) ceil(sqrt(numel(OLs)))]);
-    OL_conds(1:length(OLs)) = OLs; %fills conditions top->bottom, left->right
-    OL_conds = OL_conds'; %so that conditions are organized left->right, top->bottom
+    CL_conds = reshape(CL_conds,[round(sqrt(numel(CL_conds))) ceil(sqrt(numel(CL_conds)))])';
+    OL_conds = reshape(OL_conds,[round(sqrt(numel(OL_conds))) ceil(sqrt(numel(OL_conds)))])';
 end
-
 
 %get datatype indices
 num_OL_datatypes = length(OL_datatypes);
