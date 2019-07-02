@@ -1,5 +1,5 @@
-function G4_Process_Data_flyingdetector(exp_folder, trial_options, manual_first_start)
-%FUNCTION G4_Process_Data_flyingdetector(exp_folder, trial_options, manual_first_start)
+function G4_Process_Data_walkingsensor(exp_folder, trial_options, manual_first_start)
+%FUNCTION G4_Process_Data_walkingsensor(exp_folder, trial_options, manual_first_start)
 % 
 % Inputs:
 % exp_folder: path containing G4_TDMS_Logs file
@@ -9,10 +9,10 @@ function G4_Process_Data_flyingdetector(exp_folder, trial_options, manual_first_
 
 %% user-defined parameters
 %specify timeseries data channels
-channel_order = {'LmR_chan', 'L_chan', 'R_chan', 'F_chan', 'Frame Position', 'LmR', 'LpR'};
+channel_order = {'Vx0_chan', 'Vx1_chan', 'Vy0_chan', 'Vy1_chan', 'Frame Position', 'Turning', 'Forward', 'Sideslip'};
 
 %specify time ranges for parsing and data analysis
-data_rate = 1000; % rate (in Hz) which all data will be aligned to
+data_rate = 100; % rate (in Hz) which all data will be aligned to
 pre_dur = 1; %seconds before start of trial to include
 post_dur = 1; %seconds after end of trial to include
 da_start = 0.05; %seconds after start of trial to start data analysis
@@ -116,19 +116,20 @@ dur_error = abs(cond_dur-median_dur)./median_dur; %find condition duration error
 if ~isempty(bad_conds) %display bad trials
     out = regexp(exp_folder,'\','start');
     exp_name = exp_folder(out(end)+1:end);
-    fprintf([exp_name ' excluded trials' ])
-    fprintf(' - cond %d, rep %d',[bad_conds bad_reps]')
+    fprintf([exp_name ' excluded trials: ' ])
+    fprintf('cond %d, rep %d; ',bad_conds, bad_reps)
     fprintf('\n')
 end
 
 %get indices for all datatypes
 Frame_ind = strcmpi(channel_order,'Frame Position');
-LmR_ind = find(strcmpi(channel_order,'LmR'));
-LpR_ind = find(strcmpi(channel_order,'LpR'));
-% LmR_chan_idx = strcmpi(channel_order,'LmR_chan');
-L_chan_idx = strcmpi(channel_order,'L_chan');
-R_chan_idx = strcmpi(channel_order,'R_chan');
-% F_chan_idx = strcmpi(channel_order,'F_chan');
+Turning_ind = find(strcmpi(channel_order,'Turning'));
+Forward_ind = find(strcmpi(channel_order,'Forward'));
+Sideslip_ind = find(strcmpi(channel_order,'Sideslip'));
+Vx0_idx = strcmpi(channel_order,'Vx0_chan');
+Vx1_idx = strcmpi(channel_order,'Vx1_chan');
+Vy0_idx = strcmpi(channel_order,'Vy0_chan');
+Vy1_idx = strcmpi(channel_order,'Vy1_chan');
 num_ts_datatypes = length(channel_order);
 num_ADC_chans = length(Log.ADC.Channels);
 
@@ -169,7 +170,7 @@ for trial=1:num_trials
         end
         unaligned_time = (Log.Frames.Time(1,start_ind:stop_ind)-trial_start_times(trial))/time_conv;
         ts_data(Frame_ind,cond,rep,:) = align_timeseries(ts_time, unaligned_time, Log.Frames.Position(1,start_ind:stop_ind)+1, 'propagate', 'median');
-        
+               
         %create dataset for intertrial histogram (if applicable)
         if trial_options(2)==1 && trial<num_trials
             %get frame position data, upsampled to match ADC timestamps
@@ -183,9 +184,10 @@ end
 
 
 %% process data into meaningful datasets
-%calculate LmR (Left - Right) and LpR (Left + Right)
-ts_data(LmR_ind,:,:,:) = ts_data(L_chan_idx,:,:,:) - ts_data(R_chan_idx,:,:,:); % + = right turns, - = left turns
-ts_data(LpR_ind,:,:,:) = ts_data(L_chan_idx,:,:,:) + ts_data(R_chan_idx,:,:,:); % + = increased amplitude, - = decreased
+%calculate turning, forward, and sideslip
+ts_data(Turning_ind,:,:,:) = -(ts_data(Vx0_idx,:,:,:) + ts_data(Vx1_idx,:,:,:) - 5); % + = right turn, - = left turn
+ts_data(Forward_ind,:,:,:) = ts_data(Vy0_idx,:,:,:) + ts_data(Vy1_idx,:,:,:) - 5; % + = forward, - = backward
+ts_data(Sideslip_ind,:,:,:) = ts_data(Vy0_idx,:,:,:) - ts_data(Vy1_idx,:,:,:); % + = slip right, - = slip left
 
 %duplicate ts_data and exclude all datapoints outside data analysis window (da_start:da_stop)
 da_data = ts_data;
@@ -201,11 +203,11 @@ end
 tc_data = nanmean(da_data,4);
 
 %calculate histograms of/by pattern position
-hist_datatypes = {'Frame Position', 'LmR', 'LpR'};
+hist_datatypes = {'Frame Position', 'Turning', 'Forward', 'Sideslip'};
 num_hist_datatypes = length(hist_datatypes); 
 max_pos = max(max(max(da_data(Frame_ind,:,:,:),[],4),[],3),[],2);
 hist_data = nan([num_hist_datatypes num_conds num_reps max_pos]);
-p = permute(1:max_pos,[1 3 4 2]); %create array of all possible pattern position values along 4th dimension
+p = permute(1:max_pos,[1 3 4 2]); %create array of all possible pattern position values
         
 %get histogram of pattern position
 tmpdata = squeeze(da_data(Frame_ind,:,:,:));
@@ -213,10 +215,10 @@ p_idx = tmpdata==p;
 hist_data(1,:,:,:) = squeeze(nansum(p_idx,3)); 
 
 %get mean turning, forward, and sideslip for each pattern position
-tmpdata = repmat(da_data([LmR_ind, LpR_ind],:,:,:),[1 1 1 1 max_pos]);
-p_idx = repmat(permute(p_idx,[5 1 2 3 4]),[2 1 1 1 1]);
+tmpdata = repmat(da_data([Turning_ind, Forward_ind, Sideslip_ind],:,:,:),[1 1 1 1 max_pos]);
+p_idx = repmat(permute(p_idx,[5 1 2 3 4]),[3 1 1 1 1]);
 tmpdata(~p_idx) = nan;
-hist_data(2:3,:,:,:) = squeeze(nanmean(tmpdata,4)); %LmR and LpR by pattern position
+hist_data(2:4,:,:,:) = squeeze(nanmean(tmpdata,4)); %Turning, Forward, and Sideslip by pattern position
 
 %get histogram of intertrial pattern position
 if trial_options(2) %if intertrials were run
@@ -227,7 +229,7 @@ if trial_options(2) %if intertrials were run
 else
     inter_hist_data = [];
 end
-
+    
 
 %% save data
 Data.channelNames.timeseries = channel_order; %cell array of channel names for timeseries data

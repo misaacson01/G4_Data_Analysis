@@ -1,5 +1,5 @@
-function G4_Plot_Data_flyingdetector(exp_folder, trial_options, CL_conds, OL_conds, TC_conds)
-%FUNCTION G4_Plot_Data_flyingdetector(exp_folder, trial_options, CL_conds, OL_conds, TC_conds)
+function G4_Plot_Data_walkingsensor(exp_folder, trial_options, CL_conds, OL_conds, TC_conds)
+%FUNCTION G4_Plot_Data_walkingsensor(exp_folder, trial_options, CL_conds, OL_conds, TC_conds)
 % 
 % Inputs:
 % exp_folder: path containing G4_Processed_Data.mat file
@@ -10,10 +10,10 @@ function G4_Plot_Data_flyingdetector(exp_folder, trial_options, CL_conds, OL_con
 
 
 %% user-defined parameters
-%datatype options: 'LmR_chan', 'L_chan', 'R_chan', 'F_chan', 'Frame Position', 'LmR', 'LpR'
-CL_datatypes = {'Frame Position','LmR','LpR'}; %datatypes to plot as histograms
-OL_datatypes = {'LmR','LpR'}; %datatypes to plot as timeseries
-TC_datatypes = {'LmR','LpR'}; %datatypes to plot as tuning curves
+%datatype options: 'Vx0_chan', 'Vx1_chan', 'Vy0_chan', 'Vy1_chan', 'Frame Position', 'Turnin', 'Forward', 'Sideslip'
+CL_datatypes = {'Frame Position','Turning','Forward'}; %datatypes to plot as histograms
+OL_datatypes = {'Turning','Forward'}; %datatypes to plot as timeseries
+TC_datatypes = {'Turning','Forward'}; %datatypes to plot as tuning curves
 
 %specify plot properties
 rep_Color = [0.5 0.5 0.5];
@@ -21,7 +21,7 @@ mean_Color = [0 0 0];
 rep_LineWidth = 0.05;
 mean_LineWidth = 1;
 subtitle_FontSize = 8;
-ylimits = [-6 6; -1 6; -1 6; -1 6; 1 192; -6 6; 2 10]; %[min max] y limits for each datatype
+ylimits = [1 4; 1 4; 1 4; 1 4; 1 192; -0.3 0.3; -0.1 0.3; -0.1 0.3]; %[min max] y limits for each datatype
 
 %% load data and prepare for plotting
 %load G4_Processed_Data
@@ -39,17 +39,12 @@ load(fullfile(exp_folder,Data_name));
 
 %create default matrices for plotting all conditions
 if nargin<5 
+    CL_conds = find(Data.conditionModes==4); %all closed-loop modes
+    OL_conds = find(Data.conditionModes~=4); %all open-loop modes
     TC_conds = []; %by default, don't plot any tuning curves
-    CLs = find(Data.conditionModes==4); %all closed-loop modes
-    OLs = find(Data.conditionModes~=4); %all open-loop modes
-    CL_conds = nan([round(sqrt(numel(CLs))) ceil(sqrt(numel(CLs)))]); %make subplot structure
-    CL_conds(1:length(CLs)) = CLs; %fills conditions top->bottom, left->right
-    CL_conds = CL_conds'; %so that conditions are organized left->right, top->bottom
-    OL_conds = nan([round(sqrt(numel(OLs))) ceil(sqrt(numel(OLs)))]);
-    OL_conds(1:length(OLs)) = OLs; %fills conditions top->bottom, left->right
-    OL_conds = OL_conds'; %so that conditions are organized left->right, top->bottom
+    CL_conds = reshape(CL_conds,[round(sqrt(numel(CL_conds))) ceil(sqrt(numel(CL_conds)))])';
+    OL_conds = reshape(OL_conds,[round(sqrt(numel(OL_conds))) ceil(sqrt(numel(OL_conds)))])';
 end
-
 
 %get datatype indices
 num_OL_datatypes = length(OL_datatypes);
@@ -67,7 +62,6 @@ TC_inds = nan(1,num_TC_datatypes);
 for d = 1:num_TC_datatypes
     TC_inds(d) = find(strcmpi(Data.channelNames.timeseries,TC_datatypes{d}));
 end
-
 
 %% plot data
 %calculate overall measurements and plot basic histograms
@@ -131,7 +125,7 @@ if ~isempty(OL_conds)
     num_figs = size(OL_conds,3);
     num_reps = size(Data.timeseries,3);
     %loop for different data types
-    for d = 1:OL_inds
+    for d = OL_inds
         for fig = 1:num_figs
             num_plot_rows = max(nansum(OL_conds(:,:,fig)>0));
             num_plot_cols = max(nansum(OL_conds(:,:,fig)>0,2));
@@ -146,6 +140,7 @@ if ~isempty(OL_conds)
                         hold on
                         plot(Data.timestamps,squeeze(nanmean(Data.timeseries(d,cond,:,:),3)),'Color',mean_Color,'LineWidth',mean_LineWidth);
                         ylim(ylimits(d,:));
+                        xlim([min(Data.timestamps) max(Data.timestamps)])
                         title(['Condition #' num2str(cond)],'FontSize',subtitle_FontSize)
                     end
                 end
@@ -158,7 +153,7 @@ end
 if ~isempty(TC_conds)
     num_figs = size(TC_conds,3);
     %loop for different data types
-    for d = 1:TC_inds
+    for d = TC_inds
         for fig = 1:num_figs
             num_plot_rows = max(nansum(TC_conds(:,:,fig)>0));
             figure()
