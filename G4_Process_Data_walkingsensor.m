@@ -117,7 +117,7 @@ if ~isempty(bad_conds) %display bad trials
     out = regexp(exp_folder,'\','start');
     exp_name = exp_folder(out(end)+1:end);
     fprintf([exp_name ' excluded trials: ' ])
-    fprintf('cond %d, rep %d; ',bad_conds, bad_reps)
+    fprintf('cond %d, rep %d; ',[bad_conds bad_reps]')
     fprintf('\n')
 end
 
