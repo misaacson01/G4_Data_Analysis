@@ -13,17 +13,22 @@ upscale_limit = 2; %maximum size of NaN gap that will be filled by upscaling met
 %pre-allocate space for aligned_data matrix (rows accommodate downscaling)
 set_period = median(diff(set_times));
 unaligned_period = median(diff(unaligned_times));
-aligned_data = nan([max([ceil(2*set_period/unaligned_period) 3]) length(set_times)]);
 
 %align data to nearest time indices in set_times (col_inds)
 %multiple datapoints occupying the same col_ind are given different row_inds
 col_inds = round(((unaligned_times-min(set_times))/set_period)+1);
+if any(col_inds<1)||any(col_inds>length(set_times)
+    error('timestamps extend outside of set time boundaries')
+end
+
 row_inds = diff([0 col_inds]);
 row_inds(row_inds>1) = 1;
 while any(row_inds==0)
     next_idx = ~row_inds; 
     row_inds = row_inds + next_idx.*([1 row_inds(1:end-1)+1]);
 end
+
+aligned_data = nan([max(row_inds) length(set_times)]);
 array_size = size(aligned_data);
 aligned_data(sub2ind(array_size,row_inds,col_inds)) = unaligned_data;
 

@@ -137,7 +137,8 @@ num_ADC_chans = length(Log.ADC.Channels);
 %% organize TDMS data by datatype/condition/repetition and align timeseries together
 %pre-allocate space
 longest_dur = max(max(cond_dur));
-ts_time = -pre_dur-0.01:1/data_rate:longest_dur+post_dur+0.01; 
+data_period = 1/data_rate;
+ts_time = -pre_dur-data_period:data_period:longest_dur+post_dur+data_period; 
 ts_data = nan([num_ts_datatypes num_conds num_reps length(ts_time)]);
 if trial_options(2) %if intertrials were run
     inter_ts_time = 0:1/data_rate:max(intertrial_durs)+0.01; 
@@ -210,22 +211,22 @@ hist_data = nan([num_hist_datatypes num_conds num_reps max_pos]);
 p = permute(1:max_pos,[1 3 4 2]); %create array of all possible pattern position values
         
 %get histogram of pattern position
-tmpdata = squeeze(da_data(Frame_ind,:,:,:));
+tmpdata = permute(da_data(Frame_ind,:,:,:),[2 3 4 1]);
 p_idx = tmpdata==p;
-hist_data(1,:,:,:) = squeeze(nansum(p_idx,3)); 
+hist_data(1,:,:,:) = nansum(p_idx,3);  
 
 %get mean turning, forward, and sideslip for each pattern position
 tmpdata = repmat(da_data([Turning_ind, Forward_ind, Sideslip_ind],:,:,:),[1 1 1 1 max_pos]);
 p_idx = repmat(permute(p_idx,[5 1 2 3 4]),[3 1 1 1 1]);
 tmpdata(~p_idx) = nan;
-hist_data(2:4,:,:,:) = squeeze(nanmean(tmpdata,4)); %Turning, Forward, and Sideslip by pattern position
+hist_data(2:4,:,:,:) = nanmean(tmpdata,4); %Turning, Forward, and Sideslip by pattern position
 
 %get histogram of intertrial pattern position
 if trial_options(2) %if intertrials were run
     max_pos = max(max(inter_ts_data,[],2));
     p = permute(1:max_pos,[3 1 2]);
     p_idx = inter_ts_data==p;
-    inter_hist_data = squeeze(nansum(p_idx,2)); 
+    inter_hist_data = permute(nansum(p_idx,2),[1 3 2]); 
 else
     inter_hist_data = [];
 end
@@ -239,6 +240,6 @@ Data.interhistogram = inter_hist_data; %[repetition, pattern-position]
 Data.timestamps = ts_time; %[1 timestamp]
 Data.timeseries = ts_data; %[datatype, condition, repition, datapoint]
 Data.summaries = tc_data; %[datatype, condition, repition]
-Data.conditionModes = cond_modes; %[condition]
+Data.conditionModes = cond_modes(:,1); %[condition]
 save(fullfile(exp_folder,'G4_Processed_Data.mat'),'Data');
 
