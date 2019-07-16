@@ -170,7 +170,7 @@ for trial=1:num_trials
         end
         unaligned_time = (Log.Frames.Time(1,start_ind:stop_ind)-trial_start_times(trial))/time_conv;
         ts_data(Frame_ind,cond,rep,:) = align_timeseries(ts_time, unaligned_time, Log.Frames.Position(1,start_ind:stop_ind)+1, 'propagate', 'median');
-        
+
         %create dataset for intertrial histogram (if applicable)
         if trial_options(2)==1 && trial<num_trials
             %get frame position data, upsampled to match ADC timestamps

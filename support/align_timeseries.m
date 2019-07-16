@@ -17,7 +17,7 @@ unaligned_period = median(diff(unaligned_times));
 %align data to nearest time indices in set_times (col_inds)
 %multiple datapoints occupying the same col_ind are given different row_inds
 col_inds = round(((unaligned_times-min(set_times))/set_period)+1);
-if any(col_inds<1)||any(col_inds>length(set_times)
+if any(col_inds<1)||any(col_inds>length(set_times))
     error('timestamps extend outside of set time boundaries')
 end
 
@@ -27,27 +27,26 @@ while any(row_inds==0)
     next_idx = ~row_inds; 
     row_inds = row_inds + next_idx.*([1 row_inds(1:end-1)+1]);
 end
-
 aligned_data = nan([max(row_inds) length(set_times)]);
 array_size = size(aligned_data);
 aligned_data(sub2ind(array_size,row_inds,col_inds)) = unaligned_data;
 
-
 %% downscale data if data rate is higher than set rate
 switch lower(downscaling)
     case 'mean'
-        aligned_data = nanmean(aligned_data);
+        aligned_data = nanmean(aligned_data,1);
         
     case 'median'
-        aligned_data = round(nanmedian(aligned_data));
+        aligned_data = round(nanmedian(aligned_data,1));
         
     case 'mode'
-        aligned_data = mode(aligned_data);
+        aligned_data = mode(aligned_data,1);
         
     otherwise
         error('For downscaling, choose either "mean", "median", or mode')
 end
-    
+
+
 %% upscale data if data rate is lower than set rate
 %ignore any missing data at the start/end (upscaling fills missing gaps only)
 nanidx = isnan(aligned_data);
